@@ -10,21 +10,29 @@ cap = cv2.VideoCapture(0)
 cap.set(3, frame_width)
 cap.set(4, frame_height)
 
-def empty(_):
-    pass
+def change_enabled(value):
+    global start
+    
+    if value == 1:
+        start = 0
+
 
 
 cv2.namedWindow("Prediction")
 cv2.resizeWindow("Prediction", 640, 240)
-cv2.createTrackbar("enabled", "Prediction", 1, 1, empty)
+cv2.createTrackbar("enabled", "Prediction", 1, 1, change_enabled)
 
 
 start = 0
 station = ""
 time_diff = None
+recognition_time = 3
 
 def prediction_enabled():
     return cv2.getTrackbarPos("enabled", "Prediction") == 1
+
+def set_prediction_disabled():
+    cv2.setTrackbarPos("enabled", "Prediction", 0)
 
 
 def is_squareish(height, width):
@@ -36,8 +44,8 @@ def is_squareish(height, width):
     return percentual_diff > 85
 
 
-def get_countours(img, img_contour, original, cropped):
-    global start, station, time_diff
+def get_countours(img, img_contour, original):
+    global start, station, time_diff, recognition_time
 
     contours, hierarchy = cv2.findContours(img, cv2. RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -71,7 +79,7 @@ def get_countours(img, img_contour, original, cropped):
             if not is_squareish(w, h):
                 continue
 
-            if time_diff != None and time_diff > 5 and prediction_enabled():
+            if time_diff != None and time_diff > recognition_time and prediction_enabled():
                 return original[y_:y_+h, x_:x_+w]
 
 
@@ -110,11 +118,11 @@ while True:
     # dilated image
     img_dil = cv2.dilate(img_canny, kernel, iterations=1)
 
-    cropped = get_countours(img_dil, img_contour, img, img_cropped)
+    cropped = get_countours(img_dil, img_contour, img)
 
 
     if cropped is not None and prediction_enabled:
-        cv2.setTrackbarPos("enabled", "Prediction", 0)
+        set_prediction_disabled()
         cv2.imwrite("cropped_image.jpg", cropped)
 
         # Here we will need to make the prediction and assign the value
