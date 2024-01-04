@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import time
+from yolo_predict import YoloPredict
+import asyncio
 
 
 frame_width = 640
@@ -15,7 +17,6 @@ def change_enabled(value):
     
     if value == 1:
         start = 0
-
 
 
 cv2.namedWindow("Prediction")
@@ -98,42 +99,51 @@ def get_countours(img, img_contour, original):
                         (x_ + w + 20, y_ + 70), cv2.FONT_HERSHEY_COMPLEX, 0.7,
                         (0, 255, 0), 2)
 
-    
+async def set_station_name(_yolo_predict, img_path):
+    global station
+    station = await _yolo_predict.predict(img_path)
+    print(station)
 
 
-while True:
-    success, img = cap.read()
+async def main():
+    yolo_predict = YoloPredict()
 
-    img_contour = img.copy()
-    img_cropped = None
-    img_blur = cv2.GaussianBlur(img, (7, 7), 1)
-    img_gray = cv2.cvtColor(img_blur, cv2.COLOR_BGR2GRAY)
+    while True:
+        success, img = cap.read()
 
-    t_1 = 5
-    t_2 = 95
+        img_contour = img.copy()
+        img_cropped = None
+        img_blur = cv2.GaussianBlur(img, (7, 7), 1)
+        img_gray = cv2.cvtColor(img_blur, cv2.COLOR_BGR2GRAY)
 
-    img_canny = cv2.Canny(img_gray, t_1, t_2)
+        t_1 = 5
+        t_2 = 95
 
-    kernel = np.ones((5, 5))
-    # dilated image
-    img_dil = cv2.dilate(img_canny, kernel, iterations=1)
+        img_canny = cv2.Canny(img_gray, t_1, t_2)
 
-    cropped = get_countours(img_dil, img_contour, img)
+        kernel = np.ones((5, 5))
+        # dilated image
+        img_dil = cv2.dilate(img_canny, kernel, iterations=1)
 
-
-    if cropped is not None and prediction_enabled:
-        set_prediction_disabled()
-        cv2.imwrite("cropped_image.jpg", cropped)
-
-        # Here we will need to make the prediction and assign the value
-        station = "wuuuuuuuuuuuuuuuuuuuu"
+        cropped = get_countours(img_dil, img_contour, img)
 
 
+        if cropped is not None and prediction_enabled:
+            set_prediction_disabled()
+            cropped_path = "cropped_image.jpg"
+            cv2.imwrite(cropped_path, cropped)
 
-    cv2.imshow("Result:", img_contour)
+            # Here we will need to make the prediction and assign the value
+            task1 = asyncio.create_task(
+                set_station_name(yolo_predict, cropped_path)
+                )
+            
+            await task1
+
+        cv2.imshow("Result:", img_contour)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-
+asyncio.run(main())
