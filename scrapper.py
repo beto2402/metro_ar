@@ -9,22 +9,7 @@ from selenium import webdriver
 import urllib.request
 import cv2
 import os
-
-
-def get_resized_jpg(og_path):
-    img = cv2.imread(og_path, cv2.IMREAD_UNCHANGED)
-        
-    dim = (128, 128)
-
-    trans_mask = img[:,:,3] == 0
-
-    #replace areas of transparency with white and not transparent
-    img[trans_mask] = [255, 255, 255, 255]
-
-    #new image without alpha channel...
-    img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-    
-    return cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+from preprocess import resize_and_save
 
 
 la_red_dropdown_xpath = "((//a[@href='https://www.metro.cdmx.gob.mx/la-red'])[1]//following::ul[1]//child::a[contains(@href, 'www')])"
@@ -88,8 +73,7 @@ for i, line_url in enumerate(lines_links_elements):
 
         urllib.request.urlretrieve(url, og_img_path)
 
-        resized = get_resized_jpg(og_img_path)
+        resized_img_path = f"{base_path}/resized/{station_name}.jpg"
 
-        cv2.imwrite(f"{base_path}/resized/{station_name}.jpg", resized)
-
+        new_path = resize_and_save(og_img_path, resized_img_path)
 
