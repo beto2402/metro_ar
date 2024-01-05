@@ -3,6 +3,7 @@ import numpy as np
 import time
 from yolo_predict import YoloPredict
 import asyncio
+from utils import stack_images
 
 
 frame_width = 640
@@ -12,25 +13,37 @@ cap = cv2.VideoCapture(0)
 cap.set(3, frame_width)
 cap.set(4, frame_height)
 
+def empty(_):
+    pass
+
+cv2.namedWindow("Parameters")
+cv2.resizeWindow("Parameters", 640, 240)
+cv2.createTrackbar("Threshold1", "Parameters", 48, 255, empty)
+cv2.createTrackbar("Threshold2", "Parameters", 15, 255, empty)
+
+
+prediction_enabled = True
+
 def change_enabled(value):
-    global start
+    global start, prediction_enabled, station
     
     if value == 1:
         start = 0
+        station = "?"
+    
+    prediction_enabled = value == 1
 
 
 cv2.namedWindow("Prediction")
 cv2.resizeWindow("Prediction", 640, 240)
-cv2.createTrackbar("enabled", "Prediction", 1, 1, change_enabled)
+cv2.createTrackbar("enabled", "Prediction", 1 if prediction_enabled else 0, 1, change_enabled)
 
 
 start = 0
-station = ""
+station = "?"
 time_diff = None
 recognition_time = 3
 
-def prediction_enabled():
-    return cv2.getTrackbarPos("enabled", "Prediction") == 1
 
 def set_prediction_disabled():
     cv2.setTrackbarPos("enabled", "Prediction", 0)
@@ -46,7 +59,7 @@ def is_squareish(height, width):
 
 
 def get_countours(img, img_contour, original):
-    global start, station, time_diff, recognition_time
+    global start, station, time_diff, recognition_time, prediction_enabled
 
     contours, hierarchy = cv2.findContours(img, cv2. RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -80,9 +93,6 @@ def get_countours(img, img_contour, original):
             if not is_squareish(w, h):
                 continue
 
-            if time_diff != None and time_diff > recognition_time and prediction_enabled():
-                return original[y_:y_+h, x_:x_+w]
-
 
             # Draw the rectangle in the image
             cv2.rectangle(img_contour, (x_, y_), (x_ + w, y_ + h), (0, 255, 0), 5)
@@ -98,6 +108,11 @@ def get_countours(img, img_contour, original):
             cv2.putText(img_contour, f"Estación: {station}",
                         (x_ + w + 20, y_ + 70), cv2.FONT_HERSHEY_COMPLEX, 0.7,
                         (0, 255, 0), 2)
+            
+
+            if time_diff != None and time_diff > recognition_time and prediction_enabled:
+                return original[y_:y_+h, x_:x_+w]
+            
 
 async def set_station_name(_yolo_predict, img_path):
     global station
@@ -105,7 +120,10 @@ async def set_station_name(_yolo_predict, img_path):
     print(station)
 
 
+background_tasks = set()
+
 async def main():
+    global station
     yolo_predict = YoloPredict()
 
     while True:
@@ -116,8 +134,11 @@ async def main():
         img_blur = cv2.GaussianBlur(img, (7, 7), 1)
         img_gray = cv2.cvtColor(img_blur, cv2.COLOR_BGR2GRAY)
 
-        t_1 = 5
-        t_2 = 95
+        t_1 = 48
+        t_2 = 15
+
+        # t_1 = cv2.getTrackbarPos("Threshold1", "Parameters")
+        # t_2 = cv2.getTrackbarPos("Threshold2", "Parameters")
 
         img_canny = cv2.Canny(img_gray, t_1, t_2)
 
@@ -134,13 +155,24 @@ async def main():
             cv2.imwrite(cropped_path, cropped)
 
             # Here we will need to make the prediction and assign the value
-            task1 = asyncio.create_task(
+            task = asyncio.create_task(
                 set_station_name(yolo_predict, cropped_path)
                 )
             
-            await task1
+            await task
 
-        cv2.imshow("Result:", img_contour)
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
+        if len(background_tasks) > 0:
+            cv2.namedWindow("Prediction")
+            cv2.resizeWindow("Prediction", 640, 240)
+            cv2.createTrackbar("enabled", "Prediction", 1 if prediction_enabled else 0, 1, change_enabled)
+
+
+        img_stack = stack_images(0.8, ([img_canny, img_contour], [img_canny, img_contour]))
+
+        cv2.imshow("Result:", img_stack)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

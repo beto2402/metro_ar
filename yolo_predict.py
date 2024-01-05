@@ -10,6 +10,7 @@ class YoloPredict:
 
     def __init__(self):
         self.model = YOLO('runs/classify/train5/weights/best.pt')
+        self.loop = asyncio.get_event_loop()
 
     
     async def predict(self, image_path):
