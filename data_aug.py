@@ -146,7 +146,7 @@ def apply_random_transformations_and_save(img, train_output_folder, test_output_
 def get_transformed_img_path(base_output_folder, file_name):
     return os.path.join(base_output_folder, file_name)
 
-grayscale = True
+grayscale = False
 
 input_folder = 'datasets/mios/resized'
 output_base_folder = 'datasets/mios/augs'
@@ -174,5 +174,5 @@ for filename in os.listdir(input_folder):
         train_output_folder = create_output_directory(train_folder, station_name)
         test_output_folder = create_output_directory(test_folder, station_name)
 
-        apply_random_transformations_and_save(img, train_output_folder, test_output_folder, station_name, num_new_images=150, grayscale=True)
+        apply_random_transformations_and_save(img, train_output_folder, test_output_folder, station_name, num_new_images=150, grayscale=grayscale)
 

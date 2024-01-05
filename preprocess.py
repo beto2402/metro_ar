@@ -18,5 +18,10 @@ def get_resized_jpg(og_path):
     return cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
 
 
-def resize_and_save(og_path, new_path):
-    cv2.imwrite(new_path, get_resized_jpg(og_path))
+def resize_and_save(og_path, new_path, grayscale=False):
+    resized_img = get_resized_jpg(og_path)
+    
+    if grayscale:
+        resized_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
+
+    return cv2.imwrite(new_path, resized_img)

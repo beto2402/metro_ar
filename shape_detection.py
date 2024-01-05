@@ -45,7 +45,10 @@ time_diff = None
 recognition_time = 3
 
 
-def set_prediction_disabled():
+def set_prediction_enabled(_enabled):
+    global prediction_enabled
+    prediction_enabled = _enabled
+
     cv2.setTrackbarPos("enabled", "Prediction", 0)
 
 
@@ -123,8 +126,8 @@ async def set_station_name(_yolo_predict, img_path):
 background_tasks = set()
 
 async def main():
-    global station
-    yolo_predict = YoloPredict()
+    global station, prediction_enabled
+    yolo_predict = YoloPredict(grayscale=True)
 
     while True:
         success, img = cap.read()
@@ -150,8 +153,9 @@ async def main():
 
 
         if cropped is not None and prediction_enabled:
-            set_prediction_disabled()
-            cropped_path = "cropped_image.jpg"
+            set_prediction_enabled(False)
+            
+            cropped_path = "/tmp/cropped_image.jpg"
             cv2.imwrite(cropped_path, cropped)
 
             # Here we will need to make the prediction and assign the value
@@ -164,15 +168,15 @@ async def main():
             background_tasks.add(task)
             task.add_done_callback(background_tasks.discard)
 
-        if len(background_tasks) > 0:
-            cv2.namedWindow("Prediction")
-            cv2.resizeWindow("Prediction", 640, 240)
-            cv2.createTrackbar("enabled", "Prediction", 1 if prediction_enabled else 0, 1, change_enabled)
+        # if len(background_tasks) > 0:
+        #     cv2.namedWindow("Prediction")
+        #     cv2.resizeWindow("Prediction", 640, 240)
+        #     cv2.createTrackbar("enabled", "Prediction", 1 if prediction_enabled else 0, 1, change_enabled)
 
 
         img_stack = stack_images(0.8, ([img_canny, img_contour], [img_canny, img_contour]))
 
-        cv2.imshow("Result:", img_stack)
+        cv2.imshow("Result:", img_contour)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

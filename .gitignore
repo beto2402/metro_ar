@@ -2,4 +2,4 @@ __pycache__
 datasets/
 venv
 dump
-predictions/*.jpg
+**/*.jpg
