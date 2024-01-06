@@ -23,7 +23,7 @@ class YoloPredict:
         
 
 
-    async def predict(self, image_path):
+    def predict(self, image_path):
         preprocessed_img_path = f"predictions/prediction_{time.time()}.jpg"
         resize_and_save(image_path, preprocessed_img_path, grayscale=self.grayscale)
 
