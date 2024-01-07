@@ -61,7 +61,7 @@ for nombre_linea in nombres_lineas:
 
         img = cv2.imread(path_imagen_original, cv2.IMREAD_UNCHANGED)
     
-        dim = (144, 144)
+        dim = (128, 128)
 
         trans_mask = img[:,:,3] == 0
 

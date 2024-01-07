@@ -32,8 +32,6 @@ cv2.createTrackbar("enabled", "Prediction", 1 if permitir_prediccion else 0, 1, 
 
 
 estacion = "?"
-diferencia = None
-tiempo_de_reconocimiento = 3
 
 
 def cambiar_permitir_prediccion(_enabled):
@@ -51,7 +49,7 @@ def es_cuadrado(altura, ancho):
 
 
 def obtener_contorno(img, img_contour, original):
-    global start, estacion, diferencia, tiempo_de_reconocimiento, permitir_prediccion
+    global start, estacion, permitir_prediccion
 
     contours, hierarchy = cv2.findContours(img, cv2. RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -60,31 +58,27 @@ def obtener_contorno(img, img_contour, original):
 
         # Discard very small figures
         if area > 1100:
-            #cv2.drawContours(img_contour, contour, -1, (255, 0, 255), 7)
-
             perimeter = cv2.arcLength(contour, True)
 
-            # Find the bounding polygon for the given contour. 
-            # The last var spacifies the contour must be closed
+            # Busca el polígono que encierre el contorno dado. 
+            # La última variable nos dice que debe ser un contorno cerrado
             approx_bounding = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
 
-            #Check number of sides
+            # Verifica número de lados
             if len(approx_bounding) not in {4, 5}:
                 continue
 
 
-
-            # Get the bounding rectangle out of the given boundings
+            # Obtiene el rectánculo que contiene los límites obtenidos
             x_, y_, w, h = cv2.boundingRect(approx_bounding)
 
             if not es_cuadrado(w, h):
                 continue
 
-
-            # Draw the rectangle in the image
+            # Dibuja el cuadrado en la imagen que se muestra
             cv2.rectangle(img_contour, (x_, y_), (x_ + w, y_ + h), (0, 255, 0), 5)
 
-            
+            # Escribe el texto del resultado en la imagen
             cv2.putText(img_contour, f"Resultado: {estacion}",
                         (x_ + w + 20, y_ + 70), cv2.FONT_HERSHEY_COMPLEX, 0.7,
                         (255, 0, 255), 2)
