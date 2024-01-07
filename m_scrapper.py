@@ -8,26 +8,13 @@ from selenium.webdriver.common.by import By
 from selenium import webdriver
 import urllib.request
 import cv2
+import os
+
 
 ## Para correr el archivo es necesario crear las siguientes carpetas:
 ## - imagenes/o
 ## - imagenes/m
 
-
-def get_resized_jpg(og_path):
-    img = cv2.imread(og_path, cv2.IMREAD_UNCHANGED)
-    
-    dim = (128, 128)
-
-    trans_mask = img[:,:,3] == 0
-
-    #replace areas of transparency with white and not transparent
-    img[trans_mask] = [255, 255, 255, 255]
-
-    #new image without alpha channel...
-    img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-    
-    return cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
 
 
 nombres_lineas = [
@@ -46,7 +33,10 @@ nombres_lineas = [
 ]
 
 xpath_imagenes = "//img[contains(@class, 'fr-fic')]"
-base_path = "imagenes"
+base_path = "imagenes/originales"
+
+if not os.path.exists(base_path): 
+           os.makedirs(base_path)
 
 opts = Options()
 opts.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.152 Safari/537.36")
@@ -66,9 +56,24 @@ for nombre_linea in nombres_lineas:
         url = estacion.get_attribute("src")
         nombre_imagen = f"{id_linea}.{i+1}.jpg"
         
-        path_imagen_original = f"{base_path}/o/{nombre_imagen}"
+        path_imagen_original = f"tmp_{nombre_imagen}"
         urllib.request.urlretrieve(url, path_imagen_original)
 
-        resized = get_resized_jpg(path_imagen_original)
+        img = cv2.imread(path_imagen_original, cv2.IMREAD_UNCHANGED)
+    
+        dim = (144, 144)
 
-        cv2.imwrite(f"{base_path}/m/{nombre_imagen}", resized)
+        trans_mask = img[:,:,3] == 0
+
+        #replace areas of transparency with white and not transparent
+        img[trans_mask] = [255, 255, 255, 255]
+
+        #new image without alpha channel...
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
+        os.remove(path_imagen_original)
+
+        cv2.imwrite(
+              f"{base_path}/{nombre_imagen}",
+              cv2.resize(img, dim, interpolation = cv2.INTER_AREA))
+
