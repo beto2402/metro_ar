@@ -7,9 +7,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 import urllib.request
-import cv2
+from PIL import Image
 import os
-from preprocess import resize_and_save
+from preprocess import resize_and_save, save_png_as_jpg
 
 
 la_red_dropdown_xpath = "((//a[@href='https://www.metro.cdmx.gob.mx/la-red'])[1]//following::ul[1]//child::a[contains(@href, 'www')])"
@@ -67,13 +67,27 @@ for i, line_url in enumerate(lines_links_elements):
         if not os.path.exists(ogs_path): 
            os.makedirs(ogs_path)
         
+        
+
         resizeds_path = f"{base_path}/resized"
         if not os.path.exists(resizeds_path):
            os.makedirs(resizeds_path)
 
+        
+        jpgs_ogs_path = f"{base_path}/jpgs"
+        if not os.path.exists(jpgs_ogs_path):
+           os.makedirs(jpgs_ogs_path)
+        
+
         urllib.request.urlretrieve(url, og_img_path)
 
+        jpg_og_img_path = f"{base_path}/jpgs/{station_name}.jpg"
+
+        save_png_as_jpg(og_img_path, new_path)
+        
         resized_img_path = f"{base_path}/resized/{station_name}.jpg"
 
-        new_path = resize_and_save(og_img_path, resized_img_path)
+        new_path = resize_and_save(jpg_og_img_path, resized_img_path)
+
+
 

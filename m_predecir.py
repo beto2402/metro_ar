@@ -1,20 +1,26 @@
-# import YOLO model
 from ultralytics import YOLO
-from preprocess import resize_and_save
 import time
-import asyncio
 import cv2
+import os
 
-model = YOLO(f"runs/classify/color/weights/best.pt")
+model = YOLO(f"runs/classify/train5/weights/best.pt")
+
+path_preprocesadas = f"imagenes/predicciones/preprocesadas"
+
+if not os.path.exists(path_preprocesadas):
+    os.makedirs(path_preprocesadas)
+
 
 def predecir(image_path):
-    global model
+    global model, path_preprocesadas
 
-    path_preprocesada = f"prediccion_{time.time()}.jpg"
-    preprocesar(image_path, path_preprocesada)
+    path_img_preprocesada = f"{path_preprocesadas}/prediccion_{time.time()}.jpg"
+    preprocesar(image_path, path_img_preprocesada)
 
     # Realizar la predicción
-    result = model.predict(path_preprocesada)[0]
+    result = model.predict(path_img_preprocesada)[0]
+
+    os.remove(image_path)
 
     top1_pred = result.probs.top1
 
@@ -23,9 +29,12 @@ def predecir(image_path):
 
 def preprocesar(og_path, new_path):
     img = cv2.imread(og_path, cv2.IMREAD_UNCHANGED)
-        
+    
     dim = (128, 128)
     
-    resized_img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+    img_redimensionada = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
 
-    cv2.imwrite(new_path, resized_img)
+    img_blanco_negro = cv2.cvtColor(img_redimensionada, cv2.COLOR_BGR2GRAY) 
+
+    cv2.imwrite(new_path, img_blanco_negro)
+

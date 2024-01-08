@@ -2,7 +2,7 @@
 from ultralytics import YOLO
 from preprocess import resize_and_save
 import time
-import asyncio
+import os
 
 
 class YoloPredict:
@@ -12,7 +12,7 @@ class YoloPredict:
     @property
     def folder(self):
         if self.grayscale:
-            return "g_scale_train_over_f"
+            return "gray_scale"
         else:
             return "color"
 
@@ -26,7 +26,7 @@ class YoloPredict:
     def predict(self, image_path):
         preprocessed_img_path = f"predictions/prediction_{time.time()}.jpg"
         resize_and_save(image_path, preprocessed_img_path, grayscale=self.grayscale)
-
+        os.remove(image_path)
 
         # Realizar la predicción
         result = self.model.predict(preprocessed_img_path)[0]

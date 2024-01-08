@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 import time
-import asyncio
 from yolo_predict import YoloPredict
+from preprocess import default_t_1, default_t_2
 
 
 frame_width = 640
@@ -49,7 +49,7 @@ class MetroPredictor(YoloPredict):
         return cv2.dilate(img_canny, kernel, iterations=1)
         
     
-    def __init__(self, recognition_time=3, t_1=48, t_2=15, grayscale=True, default_name="?") -> None:
+    def __init__(self, recognition_time=3, t_1=default_t_1, t_2=default_t_2, grayscale=True, default_name="") -> None:
         super().__init__(grayscale=grayscale)
 
         self.cap.set(3, frame_width)
@@ -67,7 +67,7 @@ class MetroPredictor(YoloPredict):
     def _change_enabled(self, value):
         if value == 1:
             self.start = 0
-            self.station = "?"
+            self.station = self.default_name
         
         self.prediction_enabled = value == 1
 
@@ -126,6 +126,8 @@ class MetroPredictor(YoloPredict):
         squares_count = 0
 
         for i, contour in enumerate(contours):
+            if squares_count > 0:
+                break
 
             bounding_rectangle = self._get_bounding_rectangle(contour)
 
@@ -145,8 +147,8 @@ class MetroPredictor(YoloPredict):
 
 
             cv2.putText(self.image_contour, f"{self.station}",
-                        (x_ + 20, y_ - 20), cv2.FONT_HERSHEY_COMPLEX, 0.7,
-                        (0, 0, 255), 2)
+                        (x_ - 10, y_ - 20), cv2.FONT_HERSHEY_COMPLEX, 1.5,
+                        (255, 0, 0), 2)
             
 
             if self._time_completed and self.prediction_enabled:
@@ -175,8 +177,8 @@ class MetroPredictor(YoloPredict):
                 self.cropped = cropped
                 self._set_prediction_enabled(False)
 
-                self.cropped_path = f"/tmp/cropped_image_{time.time()}.jpg"
-                cv2.imwrite(self.cropped_path, cropped)
+                self.cropped_path = f"tmp/cropped_image_{time.time()}.jpg"
+                cv2.imwrite(self.cropped_path, self.cropped)
 
                 # Here we will need to make the prediction and assign the value
                 self._predict_station()
@@ -186,12 +188,4 @@ class MetroPredictor(YoloPredict):
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
-
-metro_predictor = MetroPredictor(grayscale=False, recognition_time=0.5)
-
-metro_predictor.start_process()
-
-
-
 
