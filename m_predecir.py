@@ -3,7 +3,7 @@ import time
 import cv2
 import os
 
-model = YOLO(f"runs/classify/miris/weights/best.pt")
+model = YOLO(f"runs/classify/train/weights/best.pt")
 
 path_preprocesadas = f"imagenes/predicciones/preprocesadas"
 
