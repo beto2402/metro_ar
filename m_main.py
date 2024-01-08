@@ -19,7 +19,7 @@ def cambiar_permitido(value):
 
 
 cv2.namedWindow("Prediction")
-cv2.resizeWindow("Prediction", 640, 240)
+cv2.resizeWindow("Prediction", 300, 50)
 cv2.createTrackbar("enabled", "Prediction", 1 if permitir_prediccion else 0, 1, cambiar_permitido)
 
 
