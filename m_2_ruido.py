@@ -44,9 +44,9 @@ def aumentar_datos(img, carpeta_entrenamiento, carpeta_prueba, id_estacion, n_im
         cv2.imwrite(os.path.join(carpeta_salida, nuevo_nombre), imagen_modificada)
 
         # Rotar la imagen entre 1 y 359 grados
-        centro_imagen = tuple(np.array(img.shape[1::-1]) / 2)
+        centro_imagen = tuple(np.array(imagen_modificada.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(centro_imagen, np.random.choice(range(1, 359)), 1.0)
-        imagen_modificada = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
+        imagen_modificada = cv2.warpAffine(imagen_modificada, rot_mat, imagen_modificada.shape[1::-1], flags=cv2.INTER_LINEAR)
         
         nuevo_nombre = f'{np.random.choice(range(0, 359))}_' + nuevo_nombre
 
