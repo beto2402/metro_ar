@@ -18,19 +18,23 @@ def cambiar_permitido(value):
     permitir_prediccion = value == 1
 
 
-cv2.namedWindow("Prediction")
-cv2.resizeWindow("Prediction", 640, 240)
-cv2.createTrackbar("enabled", "Prediction", 1 if permitir_prediccion else 0, 1, cambiar_permitido)
+cv2.namedWindow("Permitir Prediccion", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Permitir Prediccion", 640, 90)
+cv2.createTrackbar("permitida", "Permitir Prediccion", 1 if permitir_prediccion else 0, 1, cambiar_permitido)
 
+cv2.namedWindow("Video",  cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Video", 640, 320)
+
+cv2.moveWindow('Video', 0, 300)
 
 estacion = "?"
 
 
-def cambiar_permitir_prediccion(_enabled):
+def cambiar_permitir_prediccion(_permitida):
     global permitir_prediccion
-    permitir_prediccion = _enabled
+    permitir_prediccion = _permitida
 
-    cv2.setTrackbarPos("enabled", "Prediction", 1 if _enabled else 0)
+    cv2.setTrackbarPos("permitida", "Permitir Prediccion", 1 if _permitida else 0)
 
 
 def es_cuadrado(altura, ancho):
@@ -108,10 +112,16 @@ def main():
             cv2.imwrite(path_cuadrado_recortado, cuadrado_recortado)
 
             # Se hace la predicción y se asigna el valor
-            estacion = predecir(path_cuadrado_recortado)            
+            estacion = predecir(path_cuadrado_recortado)
+
+            imagen_estacion = cv2.imread(f"imagenes/originales/{estacion}.jpg")
+
+            cv2.imshow("Resultado", imagen_estacion)
+            cv2.moveWindow('Resultado', 600, 400)
                 
 
-        cv2.imshow("Result:", img_contour)
+        cv2.imshow("Video", img_contour)
+
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

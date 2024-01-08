@@ -12,12 +12,6 @@ import os
 from PIL import Image
 
 
-## Para correr el archivo es necesario crear las siguientes carpetas:
-## - imagenes/o
-## - imagenes/m
-
-
-
 nombres_lineas = [
     "linea-1",
     "linea-2",

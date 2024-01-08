@@ -2,8 +2,10 @@ from ultralytics import YOLO
 import time
 import cv2
 import os
+from PIL import Image
 
-model = YOLO(f"runs/classify/train/weights/best.pt")
+
+model = YOLO("runs/classify/train/weights/best.pt")
 
 path_preprocesadas = f"imagenes/predicciones/preprocesadas"
 
@@ -17,8 +19,10 @@ def predecir(image_path):
     path_img_preprocesada = f"{path_preprocesadas}/prediccion_{time.time()}.jpg"
     preprocesar(image_path, path_img_preprocesada)
 
+    img = Image.open(path_img_preprocesada)
+
     # Realizar la predicción
-    result = model.predict(path_img_preprocesada)[0]
+    result = model.predict(img)[0]
 
     os.remove(image_path)
 
