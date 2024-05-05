@@ -1,28 +1,20 @@
 import cv2
 import numpy as np
-import time
+import random
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
 
-frame_width = 640
-frame_height = 480
-
-cap = cv2.VideoCapture(0)
-cap.set(3, frame_width)
-cap.set(4, frame_height)
-
-def empty(_):
-    pass
-
-cv2.namedWindow("Parameters")
-cv2.resizeWindow("Parameters", 640, 240)
-cv2.createTrackbar("Threshold1", "Parameters", 48, 255, empty)
-cv2.createTrackbar("Threshold2", "Parameters", 15, 255, empty)
+BRILLIANT = "Brillante"
+PARTIALLY_CLOUDED = "Parcialmente nublado"
+CLOUDY = "Nublado"
 
 
-cv2.namedWindow("Prediction")
-cv2.resizeWindow("Prediction", 640, 240)
-cv2.createTrackbar("enabled", "Prediction", 1, 1, empty)
-
+indexes = {
+    BRILLIANT: list(range(1, 301)),
+    PARTIALLY_CLOUDED: list(range(301, 601)),
+    CLOUDY: list(range(601, 901))
+}
 
 
 def stack_images(scale, img_array):
@@ -57,12 +49,37 @@ def stack_images(scale, img_array):
     return ver
 
 
-start = 0
-station = ""
-difference = None
+def is_white_pixel(pixel, threshold=190):
+    """
+    Determina si un píxel es blanco basado en un umbral.
+    
+    :param pixel: Un arreglo de numpy que representa un píxel (en formato BGR).
+    :param threshold: Un valor de umbral para considerar un píxel como blanco (default 240).
+    :return: True si el píxel es blanco, False de lo contrario.
+    """
+    return all(channel >= threshold for channel in pixel)
 
 
-def get_top_contour(drawable_top_contour, img_width, img_height):
+def is_gray_pixel(pixel, tolerance=55):
+    """
+    Determina si un píxel es gris y bajo un umbral.
+    
+    :param pixel: Un arreglo de numpy que representa un píxel (en formato BGR).
+    :param threshold: Un valor de umbral para considerar un píxel como gris oscuro (default 128).
+    :param tolerance: La tolerancia dentro de la cual los valores de los canales deben caer para considerarse gris (default 15).
+    :return: True si el píxel es gris y oscuro, False de lo contrario.
+    """
+    # Convertir los valores de píxeles a int para evitar desbordamiento
+    r, g, b = int(pixel[2]), int(pixel[1]), int(pixel[0])
+    
+    # Un píxel es gris si los valores de R, G y B son aproximadamente iguales
+    # Y es "bajo" si esos valores son menores que el umbral
+    return (abs(r - g) <= tolerance and
+            abs(g - b) <= tolerance and
+            abs(b - r) <= tolerance)
+
+
+def get_top_contour(img, drawable_top_contour, img_width, img_height):
     bucket_top_contour = np.empty(img_width, dtype=object)
 
     for point in drawable_top_contour:
@@ -81,14 +98,46 @@ def get_top_contour(drawable_top_contour, img_width, img_height):
     
     bucket_top_contour = [ img_height if y is None else y for y in bucket_top_contour ]
 
-    drawable_top_contour = [np.array([[x, y]], dtype=np.int32) for x, y in enumerate(bucket_top_contour)]
+    drawable_top_contour = []
+
+    for x, y in enumerate(bucket_top_contour):
+        
+        while is_white_pixel(img[y + 8, x]):
+            y = y + 1
+
+        drawable_top_contour.append(np.array([[x, y]], dtype=np.int32))
     
     return bucket_top_contour, drawable_top_contour
 
-def prediction_enabled():
-    return cv2.getTrackbarPos("enabled", "Prediction") == 1
 
-def get_countours(img, img_contour, original, cropped):
+def display_results(result):
+    image_ids = random.sample(indexes[result], 30)
+
+    same_class_images = []
+    current_row = []
+
+    for image_index in image_ids:
+
+        img_path = f"CIELOS_900/IMAGE{image_index}.jpg"
+
+        current_row.append(cv2.imread(img_path))
+        
+        if len(current_row) == 5:
+            same_class_images.append(current_row)
+            current_row = []
+
+        
+        if len(same_class_images) == 2:
+            break
+
+
+    img_stack = stack_images(0.4, same_class_images)
+
+    cv2.imshow("Result:", img_stack)
+
+
+
+def predict_sky(img, img_contour, original):
     global start, station, difference
 
     contours, hierarchy = cv2.findContours(img, cv2. RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -103,37 +152,50 @@ def get_countours(img, img_contour, original, cropped):
             biggest_area = area
             biggest_contour = contour
 
+    img_height, img_width = img.shape
 
-    bucket_top_contour, drawable_top_contour = get_top_contour(biggest_contour, img.shape[1], img.shape[0])
+    bucket_top_contour, drawable_top_contour = get_top_contour(original, biggest_contour, img_width, img_height)
+
+    pixels_count = 0
+    cloud_pixels_count = 0
+
+    for col in range(img_width):
+        for row in range(img_height):
+            if row > bucket_top_contour[col]:
+                break
+
+            pixels_count += 1
+
+            if is_white_pixel(original[row, col], threshold=140) or is_gray_pixel(original[row, col]):
+                cloud_pixels_count += 1
+
+
+    white_pixel_ratio = (cloud_pixels_count / pixels_count) * 100
+
+    print(f"Cloud pixel ratio: {white_pixel_ratio}")
     
-    cv2.drawContours(img_contour, drawable_top_contour, -1, (255, 0, 255), 7)
+    cv2.drawContours(img_contour, drawable_top_contour, -1, (255, 0, 255), 5)
     
+    if white_pixel_ratio <= 30:
+        return BRILLIANT
+
+    elif white_pixel_ratio > 30 and white_pixel_ratio < 80:
+        return PARTIALLY_CLOUDED
+    
+    else:
+        return CLOUDY
 
 
-    #[y, x]
-    perimeter = cv2.arcLength(contour, True)
+def predict(image_path):
+    img = cv2.imread(image_path)
 
-    # Find the bounding polygon for the given contour. 
-    # The last var spacifies the contour must be closed
-    approx_bounding = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
-
-
-
-
-
-while True:
-    img = cv2.imread("CIELOS_900/IMAGE536.jpg")
 
     img_contour = img.copy()
-    img_cropped = None
     img_blur = cv2.GaussianBlur(img, (7, 7), 1)
     img_gray = cv2.cvtColor(img_blur, cv2.COLOR_BGR2GRAY)
 
-    t_1 = 48
-    t_2 = 15 # 67?
-
-    threshold_1 = cv2.getTrackbarPos("Threshold1", "Parameters")
-    threshold_2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+    t_1 = 78
+    t_2 = 15
 
     img_canny = cv2.Canny(img_gray, t_1, t_2)
 
@@ -141,22 +203,24 @@ while True:
     # dilated image
     img_dil = cv2.dilate(img_canny, kernel, iterations=1)
 
-    cropped = get_countours(img_dil, img_contour, img, img_cropped)
+    return predict_sky(img_dil, img_contour, img)
 
 
-    if cropped is not None and prediction_enabled:
-        cv2.setTrackbarPos("enabled", "Prediction", 0)
-        cv2.imwrite("cropped_image.jpg", cropped)
+Tk().withdraw()
+img_path = askopenfilename()
 
-        # Here we will need to make the prediction and assign the value
-        station = "wuuuuuuuuuuuuuuuuuuuu"
+original_img = cv2.imread(img_path)
+
+cv2.imshow("Imagen origen", original_img)
+
+result = predict(img_path)
+print(f"Predicción: {result}")
+
+display_results(result)
 
 
-    img_stack = stack_images(0.8, ([img_gray, img_canny, img_contour],
-                                   [img_dil, img_dil, img_contour]))
-
-    cv2.imshow("Result:", img_stack)
-
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+while True:
+    if cv2.waitKey(1) & 0xFF == ord('q'):  # Presiona 'q' para salir
         break
+
+cv2.destroyAllWindows()
