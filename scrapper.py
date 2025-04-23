@@ -10,7 +10,7 @@ from selenium import webdriver
 import urllib.request
 from PIL import Image
 import os
-from preprocess import resize_and_save, save_png_as_jpg
+from preprocess import resize_and_save, save_as_jpg
 
 import constants
 
@@ -105,17 +105,17 @@ def handle_line_url_info(url_info):
 
         print(f"Saving station '{station_name}'")
 
-        og_img_path = f"{constants.ORIGINAL_IMAGES_PATH}/{station_name}.png"
+        original_image_path = f"{constants.ORIGINAL_IMAGES_PATH}/{station_name}.png"
 
-        save_from_url(url, og_img_path)
+        save_from_url(url, original_image_path)
 
-        jpg_og_img_path = f"{constants.BASE_PATH}/jpgs/{station_name}.jpg"
+        converted_jpg_image_path = f"{constants.BASE_PATH}/jpgs/{station_name}.jpg"
 
-        save_png_as_jpg(og_img_path, jpg_og_img_path)
+        save_as_jpg(original_image_path, converted_jpg_image_path)
 
-        resized_img_path = f"{constants.BASE_PATH}/resized/{station_name}.jpg"
+        resized_image_path = f"{constants.BASE_PATH}/resized/{station_name}.jpg"
 
-        resize_and_save(jpg_og_img_path, resized_img_path)
+        resize_and_save(converted_jpg_image_path, resized_image_path)
 
 
 initialize_folders()
