@@ -30,17 +30,21 @@ def build_driver():
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=browser_options)
 
 
+def find_elements_by_xpath(xpath):
+    return driver.find_elements(By.XPATH, xpath)
+
+
 def get_lines_urls_info():
     lines_dropdown_xpath = f"(//a[@href='{constants.BASE_URL}/la-red'])[1]"
     metro_lines_dropdown_elements_xpath = f"({lines_dropdown_xpath}//following::ul[1]//child::a[contains(@href, 'www')])"
 
     driver.get(constants.BASE_URL)
-    lines_dropdown = driver.find_elements(By.XPATH, lines_dropdown_xpath)[0]
+    lines_dropdown = find_elements_by_xpath(lines_dropdown_xpath)[0]
     lines_dropdown.click()
 
     target_urls_info = []
 
-    for dropdown_element in driver.find_elements(By.XPATH, metro_lines_dropdown_elements_xpath):
+    for dropdown_element in find_elements_by_xpath(metro_lines_dropdown_elements_xpath):
         target_urls_info.append({
             "target_url": dropdown_element.get_attribute("href"),
             "name": dropdown_element.text,
@@ -48,19 +52,50 @@ def get_lines_urls_info():
 
     return target_urls_info
 
+
+def save_from_url(url, path):
+    if os.path.exists(path):
+        return
+
+    urllib.request.urlretrieve(url, path)
+
+
+def handle_metadata():
+    service_hours_info_xpath = "//*[contains(text(), 'Días Laborales')][1]"
+    free_access_info_xpath = "//*[contains(text(), 'Adultos mayores')][1]"
+    cost_info_xpath = "//*[contains(text(), '$')][1]"
+
+    metadata = {
+        "service_hours_info": service_hours_info_xpath,
+        "free_access_info": free_access_info_xpath,
+        "cost_info": cost_info_xpath,
+    }
+
+    # Get metadata elements and save them
+    for metadata_key in metadata.keys():
+        content = find_elements_by_xpath(metadata[metadata_key])[
+            0].text.strip()
+        with open(f"{constants.GENERAL_INFORMATION_PATH}/{metadata_key}.txt", "w") as file:
+            file.write(content)
+
+    # Get integrated mobility map element
+    integrated_mobility_map_xpath = "//img[contains(@src, 'MAPA_MI')][1]"
+    image = find_elements_by_xpath(integrated_mobility_map_xpath)[0]
+    url = image.get_attribute("src")
+
+    # Save image from URL in current format
+    save_from_url(
+        url, f"{constants.GENERAL_INFORMATION_PATH}/integrated_mobility_map.png")
+
+
 def handle_line_url_info(url_info):
     # Format is "Linea ID", so we only keep what's after the space
     line_id = url_info["name"].split(" ")[1].strip().lower()
 
-    driver.get(url_info["target_url"])
-
     page_images_xpath = f"//img[contains(@src, 'linea{line_id}')]"
 
-    stations_images_elements = driver.find_elements(
-        By.XPATH, page_images_xpath)
-
     print(f"-----PROCESSING LINE '{line_id}'-----")
-    for station_element in stations_images_elements:
+    for station_element in find_elements_by_xpath(page_images_xpath):
         # The width of the icons is not higher than 100
         if int(station_element.get_attribute("width")) > 100:
             continue
@@ -72,10 +107,7 @@ def handle_line_url_info(url_info):
 
         og_img_path = f"{constants.ORIGINAL_IMAGES_PATH}/{station_name}.png"
 
-        if os.path.exists(og_img_path):
-            continue
-
-        urllib.request.urlretrieve(url, og_img_path)
+        save_from_url(url, og_img_path)
 
         jpg_og_img_path = f"{constants.BASE_PATH}/jpgs/{station_name}.jpg"
 
@@ -93,9 +125,10 @@ target_urls_info = get_lines_urls_info()
 
 
 for url_info in target_urls_info:
+    driver.get(url_info["target_url"])
 
     # Handle Map differently
     if "Mapa" in url_info["name"]:
-        continue
+        handle_metadata()
     elif "Línea" in url_info["name"]:
         handle_line_url_info(url_info)
